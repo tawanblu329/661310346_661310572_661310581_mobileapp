@@ -23,7 +23,7 @@ def main(page: ft.Page):
     current_user = {"data": None}
 
     # =========================
-    # APP BAR (ฉบับแก้ไข Error & Warning ครบถ้วน)
+    # APP BAR 
     # =========================
     def appbar():
         user_name = current_user["data"]["fullname"] if current_user["data"] else "Guest"
@@ -82,14 +82,12 @@ def main(page: ft.Page):
     # NAVBAR
     # =========================
     def bottom_nav(index=0):
-        # เช็คว่าเป็น Admin หรือไม่
         is_admin = current_user["data"] and current_user["data"].get("role") == "admin"
         
         return ft.NavigationBar(
             selected_index=index,
             bgcolor="white",
             destinations=[
-                # ถ้าเป็น Admin ไอคอนและชื่อแท็บแรกจะเปลี่ยนไป
                 ft.NavigationBarDestination(
                     icon=ft.Icons.DASHBOARD if is_admin else ft.Icons.HOME, 
                     label="แดชบอร์ด" if is_admin else "หน้าแรก"
@@ -106,7 +104,7 @@ def main(page: ft.Page):
         is_admin = current_user["data"] and current_user["data"].get("role") == "admin"
         if index == 0:
             if is_admin: 
-                show_admin_dashboard() # พาไปหน้า Dashboard ของครู
+                show_admin_dashboard() 
             else: 
                 show_home()
         elif index == 1:
@@ -118,8 +116,8 @@ def main(page: ft.Page):
         elif index == 4:
             show_profile()
 
-# =========================
-    # LAYOUT TEMPLATE แก้
+    # =========================
+    # LAYOUT TEMPLATE 
     # =========================
     
     def layout(content, nav_index):
@@ -135,7 +133,7 @@ def main(page: ft.Page):
                                 content,
                             ],
                             expand=True,
-                            scroll=ft.ScrollMode.AUTO  # ให้ scroll ที่นี่
+                            scroll=ft.ScrollMode.AUTO  
                         ),
                         expand=True,
                         margin=ft.Margin(0, 0, 0, 20) 
@@ -218,7 +216,6 @@ def main(page: ft.Page):
                     def go_home(e):
                         dlg.open = False
                         page.update()
-                        # เช็ค Role หลังล็อกอินเสร็จ
                         if current_user["data"]["role"] == "admin":
                             show_admin_dashboard()
                         else:
@@ -463,7 +460,7 @@ def main(page: ft.Page):
             0
         )
         
-# =========================
+    # =========================
     # ADMIN DASHBOARD
     # =========================
     def show_admin_dashboard():
@@ -476,7 +473,6 @@ def main(page: ft.Page):
         
         state = {"students": [], "recent_points": []}
 
-        # --- Fetch Data ---
         try:
             res_std = requests.get(f"{API_URL}/students", timeout=5)
             if res_std.status_code == 200:
@@ -488,21 +484,15 @@ def main(page: ft.Page):
         except Exception as e:
             print(f"Error loading dashboard: {e}")
 
-        # ---------------------------------------------------------
-        # ส่วนที่ 1: ความเคลื่อนไหวล่าสุด (Recent Points Feed)
-        # ---------------------------------------------------------
         feed_column = ft.Column(spacing=10)
         
         if not state["recent_points"]:
             feed_column.controls.append(ft.Text("ยังไม่มีความเคลื่อนไหว", color="grey"))
         else:
             for p in state["recent_points"]:
-                # เช็คว่าเป็นคะแนนเพิ่ม หรือ คะแนนถูกหัก
                 is_positive = p['point'] > 0
-                point_color = "#16a34a" if is_positive else "#ef4444" # สีเขียวถ้าเพิ่ม, สีแดงถ้าหัก
-                point_sign = "+" if is_positive else "" # ค่าลบมันมีเครื่องหมาย - ในตัวอยู่แล้ว
+                point_color = "#16a34a" if is_positive else "#ef4444" 
                 
-                # เปลี่ยนไอคอนด้วยให้เข้ากับสถานการณ์
                 icon_name = ft.Icons.CHECK_CIRCLE if is_positive else ft.Icons.REMOVE_CIRCLE
                 icon_bg = "#10b981" if is_positive else "#f87171"
 
@@ -514,7 +504,6 @@ def main(page: ft.Page):
                                 ft.Text(f"{p['fullname']} (ห้อง {p['student_class']})", weight="bold", size=14, color=text_col),
                                 ft.Text(f"{p['description']} | {p['date']}", size=12, color="grey"),
                             ], expand=True, spacing=2),
-                            # ใส่สีและเครื่องหมายที่เช็คไว้
                             ft.Text(f"{point_sign}{p['point']} แต้ม", color=point_color, weight="bold", size=16)
                         ]),
                         padding=15, bgcolor=card_bg, border_radius=12,
@@ -540,14 +529,10 @@ def main(page: ft.Page):
         ], scroll=ft.ScrollMode.AUTO, expand=True)
 
 
-        # ---------------------------------------------------------
-        # ส่วนที่ 2: จัดการนักเรียน (Students List & Add Student)
-        # ---------------------------------------------------------
+
         student_list_ui = ft.Column(spacing=5, expand=True, scroll=ft.ScrollMode.AUTO)
         
-        # 🔥 เพิ่มฟังก์ชันสำหรับเปิด Popup โปรไฟล์นักเรียน
         def show_student_profile_popup(student_info):
-            # 1. ดึงข้อมูลคะแนน
             total_point = 0
             history_data = []
             try:
@@ -557,7 +542,6 @@ def main(page: ft.Page):
                     total_point = sum(item['point'] for item in history_data)
             except: pass
 
-            # 2. ดึงประวัติแลกรางวัล
             redeem_history_data = []
             try:
                 res_redeem = requests.get(f"{API_URL}/user_redeem_history/{student_info['id']}", timeout=5)
@@ -565,7 +549,6 @@ def main(page: ft.Page):
                     redeem_history_data = res_redeem.json()
             except: pass
 
-            # UI สีและไอคอน
             list_item_bg = "surfaceVariant" if is_dark else "#f1f5f9"
             safe_username = str(student_info.get('username', student_info.get('fullname', 'student'))).replace(" ", "%20")
             avatar_url = f"https://api.dicebear.com/9.x/bottts/png?seed={safe_username}"
@@ -581,7 +564,6 @@ def main(page: ft.Page):
                 elif pts >= 200: return "🥈 ระดับเงิน"
                 else: return "🌱 มือใหม่"
 
-            # ประวัติความดี
             positive_history = [item for item in history_data if item.get('point', 0) > 0]
             recent_controls = []
             if not positive_history:
@@ -599,12 +581,11 @@ def main(page: ft.Page):
                         )
                     )
 
-            # ประวัติแลกรางวัล
             redeem_controls = []
             if not redeem_history_data:
                 redeem_controls.append(ft.Text("ยังไม่มีประวัติการแลกรางวัล", color="grey", italic=True, size=13))
             else:
-                for item in redeem_history_data[:3]: # โชว์แค่ 3 อันพอให้ popup ไม่ยาวเกิน
+                for item in redeem_history_data[:3]: 
                     redeem_controls.append(
                         ft.Container(
                             content=ft.Row([
@@ -619,7 +600,6 @@ def main(page: ft.Page):
                         )
                     )
 
-            # โครงสร้าง Popup
             profile_content = ft.Column([
                 ft.CircleAvatar(foreground_image_src=avatar_url, radius=40),
                 ft.Text(student_info["fullname"], size=20, weight="bold", text_align="center"),
@@ -662,7 +642,6 @@ def main(page: ft.Page):
             page.overlay.append(profile_dlg)
             profile_dlg.open = True
             page.update()
-        # 🔥 สิ้นสุดฟังก์ชัน Popup -----------------------------------
 
         def render_students(search_text=""):
             student_list_ui.controls.clear()
@@ -677,13 +656,11 @@ def main(page: ft.Page):
                         subtitle=ft.Text(f"ห้อง: {s['student_class']}", color="grey"),
                         bgcolor=card_bg,
                         shape=ft.RoundedRectangleBorder(radius=10),
-                        # เปลี่ยนจากการไปหน้าโปรไฟล์ เป็นการเปิด Popup แทน!
                         on_click=lambda e, student_data=s: show_student_profile_popup(student_data)
                     )
                 )
             page.update()
 
-        # สร้างรายชื่อเริ่มต้น
         render_students()
 
         def on_search(e):
@@ -694,7 +671,6 @@ def main(page: ft.Page):
             border_radius=15, bgcolor=card_bg, height=50, on_change=on_search
         )
 
-        # --- Dialog เพิ่มนักเรียน ---
         add_username = ft.TextField(label="Username (สำหรับล็อกอิน)")
         add_pass = ft.TextField(label="Password")
         add_name = ft.TextField(label="ชื่อ-นามสกุล")
@@ -719,7 +695,7 @@ def main(page: ft.Page):
                     page.snack_bar = ft.SnackBar(ft.Text("เพิ่มนักเรียนสำเร็จ!"), bgcolor="#16a34a")
                     page.snack_bar.open = True
                     close_add_dlg()
-                    show_admin_dashboard() # โหลดหน้าใหม่เพื่ออัปเดตข้อมูล
+                    show_admin_dashboard()
                 else:
                     page.snack_bar = ft.SnackBar(ft.Text("เกิดข้อผิดพลาดในการเพิ่มนักเรียน"), bgcolor="red")
                     page.snack_bar.open = True
@@ -751,30 +727,22 @@ def main(page: ft.Page):
             student_list_ui
         ], expand=True)
 
-        # ---------------------------------------------------------
-        # ส่วนที่ 3: ระบบปุ่มสลับหน้า (ใช้ Container แก้ปัญหาปุ่ม 100%)
-        # ---------------------------------------------------------
+
         
-        # พื้นที่แสดงเนื้อหา (เริ่มต้นให้แสดง tab_feed ก่อน)
         tab_content_area = ft.Container(content=tab_feed, padding=ft.Padding(0, 10, 0, 0), expand=True)
 
         def switch_tab(e):
-            # เช็คว่ากดปุ่มไหน (overview หรือ manage)
             is_overview = (e.control.data == "overview")
             
-            # สลับสีพื้นหลังกล่อง
             btn_overview.bgcolor = PRIMARY if is_overview else ft.Colors.TRANSPARENT
             btn_manage.bgcolor = ft.Colors.TRANSPARENT if is_overview else PRIMARY
             
-            # สลับสีตัวหนังสือ
             btn_overview.content.color = ft.Colors.WHITE if is_overview else PRIMARY
             btn_manage.content.color = PRIMARY if is_overview else ft.Colors.WHITE
 
-            # สลับเนื้อหาด้านล่าง
             tab_content_area.content = tab_feed if is_overview else tab_manage
             page.update()
 
-        # สร้างปุ่มด้วย Container (รับประกันว่าไม่มี Error แน่นอน)
         btn_overview = ft.Container(
             content=ft.Text("ภาพรวมโรงเรียน", color=ft.Colors.WHITE, weight="bold"),
             data="overview",
@@ -793,12 +761,9 @@ def main(page: ft.Page):
             on_click=switch_tab
         )
 
-        # จับปุ่มมาเรียงติดกัน
         custom_tabs = ft.Row([btn_overview, btn_manage], spacing=10)
 
-        # ---------------------------------------------------------
-        # นำองค์ประกอบทั้งหมดมาจัด Layout
-        # ---------------------------------------------------------
+
         content = ft.Column([
             ft.Text("แผงควบคุมคุณครู", size=26, weight="bold", color=PRIMARY),
             custom_tabs,
@@ -806,13 +771,12 @@ def main(page: ft.Page):
             tab_content_area
         ], expand=True)
 
-        # เรียกใช้ layout (ส่ง nav_index=0 ไปเพื่อให้รู้ว่าอยู่หน้าแดชบอร์ด)
         layout(
             ft.Container(content=content, padding=ft.Padding(20, 20, 20, 0), expand=True), 
             0
         )
         
-# =========================
+    # =========================
     # ADD POINT, EDIT/DELETE STUDENT & ADD REWARD
     # =========================
     def show_add_point():
@@ -820,7 +784,6 @@ def main(page: ft.Page):
         categories_data = []
         selected_student_id = {"value": None}
 
-        # --- Popup แจ้งเตือนกลางหน้าจอ (ชัวร์กว่า Snackbar) ---
         popup_title = ft.Text("แจ้งเตือน", weight="bold")
         popup_content = ft.Text("")
 
@@ -843,7 +806,6 @@ def main(page: ft.Page):
             popup.open = True
             page.update()
 
-        # --- 1. เตรียม UI ของฝั่งนักเรียน ---
         classroom_dropdown = ft.Dropdown(
             label="1. เลือกห้องเรียน (เพื่อกรองรายชื่อ)",
             width=350,
@@ -862,7 +824,6 @@ def main(page: ft.Page):
         card_name = ft.Text("", size=18, weight="bold")
         card_class = ft.Text("", size=14, color="grey")
 
-        # --- ระบบแก้ไขข้อมูล (Update) ---
         edit_fullname_field = ft.TextField(label="ชื่อ-นามสกุลใหม่")
         edit_class_field = ft.TextField(label="ห้องเรียนใหม่ (เช่น 1/1)")
         edit_dialog = ft.AlertDialog(modal=True)
@@ -887,7 +848,7 @@ def main(page: ft.Page):
                 if res.status_code == 200:
                     show_popup("อัปเดตข้อมูลสำเร็จ!", True)
                     close_edit_dlg()
-                    fetch_students() # โหลดข้อมูลใหม่
+                    fetch_students() 
                     select_student(s_id, new_name, new_class)
                 else:
                     show_popup("เกิดข้อผิดพลาดในการอัปเดต", False)
@@ -909,7 +870,6 @@ def main(page: ft.Page):
             edit_dialog.open = True
             page.update()
 
-        # --- ระบบลบข้อมูล (Delete) ---
         del_dialog = ft.AlertDialog(modal=True)
 
         def close_del_dlg(e=None):
@@ -1018,7 +978,6 @@ def main(page: ft.Page):
         search_box.on_change = update_search
         classroom_dropdown.on_change = update_search
 
-        # --- ดึงข้อมูลประเภทความดี ---
         try:
             cat_res = requests.get(API_URL + "/categories")
             if cat_res.status_code == 200: categories_data = cat_res.json()
@@ -1030,7 +989,6 @@ def main(page: ft.Page):
         )
         teacher = ft.TextField(label="4. ผู้บันทึก (ชื่อครู)", width=350)
 
-        # --- ฟังก์ชันบันทึกคะแนน ---
         def save_point(e):
             if not selected_student_id["value"]:
                 show_popup("กรุณาค้นหาและเลือกชื่อนักเรียนก่อนครับ", False)
@@ -1046,7 +1004,6 @@ def main(page: ft.Page):
                 })
                 if res.status_code == 200:
                     show_popup("🎉 บันทึกคะแนนความดีสำเร็จ!", True)
-                    # เคลียร์ฟอร์มหลังบันทึก
                     selected_student_id["value"] = None
                     student_card.visible = False
                     search_box.value = ""
@@ -1059,7 +1016,7 @@ def main(page: ft.Page):
                 show_popup(f"เกิดข้อผิดพลาด: {str(ex)}", False)
 
         # ==========================================
-        # 🎁 ส่วนของการเพิ่มของรางวัล (Add Reward)
+        # ส่วนของการเพิ่มของรางวัล (Add Reward)
         # ==========================================
         reward_name = ft.TextField(label="ชื่อของรางวัล", width=350)
         reward_point = ft.TextField(label="คะแนนที่ใช้แลก", width=170, input_filter=ft.NumbersOnlyInputFilter())
@@ -1090,9 +1047,7 @@ def main(page: ft.Page):
             except Exception as ex:
                 show_popup(f"Error: {ex}", False)
 
-        # --- รวม UI ทั้งหมด ---
-        # หมายเหตุ: เอา expand=True และ scroll=ft.ScrollMode.AUTO ออกจากตรงนี้ 
-        # เพื่อไม่ให้ตีกับระบบ Scroll ของหน้าหลัก
+ 
         content = ft.Column([
             ft.Text("เพิ่มคะแนนความดี", size=26, weight="bold", color=PRIMARY),
             classroom_dropdown,
@@ -1113,7 +1068,7 @@ def main(page: ft.Page):
             reward_img,
             ft.Button("บันทึกของรางวัล", bgcolor="#f59e0b", color="white", width=350, height=45, on_click=save_reward),
             
-            ft.Divider(height=50, color="transparent"), # ดันขอบล่างให้กดง่ายๆ
+            ft.Divider(height=50, color="transparent"), 
         ],
         alignment=ft.MainAxisAlignment.START, 
         horizontal_alignment=ft.CrossAxisAlignment.CENTER)
@@ -1123,10 +1078,9 @@ def main(page: ft.Page):
             1
         )
         
-        # วาดหน้าจอเสร็จแล้ว สั่งดึงข้อมูลรายชื่อและห้องเรียน
         fetch_students()
 
-# =========================
+    # =========================
     # REWARDS 
     # =========================
     
@@ -1134,19 +1088,16 @@ def main(page: ft.Page):
         user = current_user.get("data")
         
         def on_redeem_click(e):
-            # 1. ดักจับกรณีเป็น Guest จะไม่ให้แลกรางวัล
             if not user or user.get("username") == "guest":
                 show_snackbar("บัญชี Guest ไม่สามารถแลกของรางวัลได้ ❌", False)
                 return
 
-            # ดึงข้อมูลจากปุ่มที่กด
             r_id = e.control.data["id"]
             r_name = e.control.data["name"]
             r_point = e.control.data["point"]
             
             print(f"DEBUG: กำลังกดแลก {r_name} (ID: {r_id})")
 
-            # 2. สร้าง Loading แจ้งให้ผู้ใช้รอ
             loading_view = ft.Container(
                 content=ft.Column([
                     ft.ProgressRing(width=40, height=40, color=PRIMARY),
@@ -1162,19 +1113,16 @@ def main(page: ft.Page):
 
             def process_redeem():
                 try:
-                    # 3. ยิง API ไปตัดแต้ม
                     res = requests.post(f"{API_URL}/redeem", json={
                         "user_id": user['id'], 
                         "reward_id": r_id,
                         "points_required": r_point
                     }, timeout=10)
                     
-                    # 4. เคลียร์ Loading ออกทันทีเมื่อ API ตอบกลับ
                     if loading_view in page.overlay:
                         page.overlay.remove(loading_view)
                         page.update()
 
-                    # 5. เช็คสถานะ
                     if res.status_code == 200:
                         data = res.json()
                         rem_points = data.get('remaining_points', 0)
@@ -1182,7 +1130,7 @@ def main(page: ft.Page):
                         def close_success(ev):
                             success_dlg.open = False
                             page.update()
-                            show_rewards() # โหลดหน้านี้ใหม่เพื่อให้ UI รีเฟรช
+                            show_rewards() 
 
                         success_dlg = ft.AlertDialog(
                             title=ft.Text("🎉 แลกรางวัลสำเร็จ!", weight="bold"),
@@ -1195,7 +1143,6 @@ def main(page: ft.Page):
                         page.update()
 
                     else:
-                        # ❌ กรณีแต้มไม่พอ หรือเกิดข้อผิดพลาดจาก API ให้แสดง Popup
                         error_detail = res.json().get('detail', 'เกิดข้อผิดพลาด')
                         
                         def close_error(ev):
@@ -1217,7 +1164,6 @@ def main(page: ft.Page):
                         page.overlay.remove(loading_view)
                         page.update()
                     
-                    # ❌ กรณีเซิร์ฟเวอร์ล่ม เน็ตหลุด ก็ให้แสดง Popup แจ้งเตือนเช่นกัน
                     def close_network_error(ev):
                         net_error_dlg.open = False
                         page.update()
@@ -1231,10 +1177,8 @@ def main(page: ft.Page):
                     net_error_dlg.open = True
                     page.update()
 
-            # สั่งทำงานเบื้องหลัง
             threading.Thread(target=process_redeem, daemon=True).start()
 
-        # --- ส่วนแสดงผล Grid ---
         grid = ft.GridView(expand=True, max_extent=180, child_aspect_ratio=0.6, spacing=15)
 
         try:
@@ -1268,8 +1212,7 @@ def main(page: ft.Page):
 
         content = ft.Column([ft.Text("แลกของรางวัล", size=22, weight="bold"), grid], expand=True)
         layout(ft.Container(content=content, padding=ft.Padding(20, 30, 20, 20)), 2)
-        
-   # ======================================================
+    # ======================================================
     # RANKING 
     # ======================================================
     
@@ -1450,18 +1393,15 @@ def main(page: ft.Page):
 
         layout(ft.Row([main_layout], alignment=ft.MainAxisAlignment.CENTER, expand=True), 3)
 
-# =========================
+    # =========================
     # PROFILE 
     # =========================
         
-    def show_profile(target_user=None): # 🔥 จุดสำคัญที่แก้คือตรงนี้ครับ!
-        page.clean()
+    def show_profile(target_user=None):
         
-        # เช็คว่ามี target_user ส่งมาไหม ถ้ามีแปลว่ากำลังดูโปรไฟล์คนอื่นอยู่
         is_viewing_other = target_user is not None
         user = target_user if is_viewing_other else current_user["data"]
         
-        # 1. ดึงข้อมูลประวัติความดี (รวมคะแนนปัจจุบัน)
         total_point = 0
         history_data = []
         try:
@@ -1470,7 +1410,6 @@ def main(page: ft.Page):
                 history_data = res.json()
                 total_point = sum(item['point'] for item in history_data)
                 
-                # อัปเดตคะแนนล่าสุดเก็บไว้ในระบบเฉพาะตอนดูตัวเอง
                 if not is_viewing_other:
                     current_user["data"]["total_point"] = total_point
             else:
@@ -1478,7 +1417,6 @@ def main(page: ft.Page):
         except:
             total_point = user.get("total_point", 0)
 
-        # 2. ดึงข้อมูลประวัติการแลกรางวัล
         redeem_history_data = []
         try:
             res_redeem = requests.get(f"{API_URL}/user_redeem_history/{user['id']}", timeout=5)
@@ -1493,7 +1431,6 @@ def main(page: ft.Page):
         card_bg = "surfaceVariant" if is_dark else "white"
         list_item_bg = "surfaceVariant" if is_dark else "#f1f5f9"
         
-        # ใช้ username ถ้ามี แต่ถ้าไม่มี(เช่นตอนครูดูโปรไฟล์นร.) ให้ใช้ fullname แทน
         safe_username = str(user.get('username', user.get('fullname', 'guest'))).replace(" ", "%20")
         avatar_url = f"https://api.dicebear.com/9.x/bottts/png?seed={safe_username}"
 
@@ -1508,7 +1445,6 @@ def main(page: ft.Page):
             elif pts >= 200: return "🥈 ระดับเงิน"
             else: return "🌱 มือใหม่"
 
-        # ---------------- UI ส่วนบน (เพิ่มปุ่มกลับสำหรับคุณครู) ----------------
         top_nav = ft.Row([
             ft.IconButton(
                 icon=ft.Icons.ARROW_BACK_IOS_NEW, 
@@ -1518,8 +1454,6 @@ def main(page: ft.Page):
         ], alignment=ft.MainAxisAlignment.START) if is_viewing_other else ft.Container()
 
 
-        # ---------------- UI กล่องประวัติความดี ----------------
-        # กรองเอาเฉพาะแต้มบวก (การทำความดี)
         positive_history = [item for item in history_data if item.get('point', 0) > 0]
         
         recent_controls = []
@@ -1538,7 +1472,6 @@ def main(page: ft.Page):
                     )
                 )
 
-        # ---------------- UI กล่องประวัติการแลกรางวัล ----------------
         redeem_controls = []
         if not redeem_history_data:
             redeem_controls.append(ft.Text("ยังไม่มีประวัติการแลกรางวัล", color=label_col, italic=True, size=13))
@@ -1558,7 +1491,6 @@ def main(page: ft.Page):
                     )
                 )
 
-        # ---------------- รวบรวม Content ----------------
         content_list = [
             top_nav,
             ft.CircleAvatar(foreground_image_src=avatar_url, radius=55),
@@ -1580,7 +1512,6 @@ def main(page: ft.Page):
 
             ft.Divider(height=8, color="transparent"),
 
-            # กล่องประวัติการทำความดีล่าสุด
             ft.Container(
                 content=ft.Column([
                     ft.Row([ft.Text("📋 ประวัติการทำความดีล่าสุด", weight="bold", size=14, color=text_col)]),
@@ -1593,7 +1524,6 @@ def main(page: ft.Page):
 
             ft.Divider(height=4, color="transparent"),
 
-            # กล่องประวัติการแลกรางวัล
             ft.Container(
                 content=ft.Column([
                     ft.Row([ft.Text("🎁 ประวัติการแลกรางวัล", weight="bold", size=14, color=text_col)]),
@@ -1605,7 +1535,6 @@ def main(page: ft.Page):
             ),
         ]
 
-        # ถ้าผู้ใช้กำลังดูโปรไฟล์ตัวเอง ให้มีเมนู Dark Mode และ Logout
         if not is_viewing_other:
             content_list.extend([
                 ft.Divider(height=8, color="transparent"),
@@ -1635,7 +1564,6 @@ def main(page: ft.Page):
             expand=True, scroll=ft.ScrollMode.AUTO, spacing=8,
         )
 
-        # ถ้าดูคนอื่นอยู่ ให้ปุ่มข้างล่างค้างไว้ที่ Tab 0 (Dashboard)
         active_nav_index = 0 if is_viewing_other else 4
 
         layout(

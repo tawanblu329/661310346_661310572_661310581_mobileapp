@@ -100,7 +100,6 @@ def get_recent_points():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # ดึงข้อมูลการให้คะแนนล่าสุด 20 รายการ พร้อมชื่อและห้องของนักเรียน
     query = """
         SELECT p.point, p.description, DATE_FORMAT(p.created_at, '%d/%m/%Y %H:%i') as date,
                u.fullname, u.student_class
@@ -126,7 +125,6 @@ def login(data: LoginRequest):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # ดึงแค่ข้อมูลพื้นฐาน (ห้าม JOIN ตาราง points ในขั้นตอนนี้)
     query = "SELECT id, username, fullname, role, student_class FROM users WHERE username=%s AND password=%s"
     
     cursor.execute(query, (data.username, data.password))
@@ -138,7 +136,6 @@ def login(data: LoginRequest):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid login")
     
-    # ส่ง total_point เป็น 0 ไปก่อนเพื่อให้ Login ผ่านทันที
     user["total_point"] = 0 
     return {"user": user}
 
@@ -176,7 +173,6 @@ class UpdateStudent(BaseModel):
     fullname: str
     student_class: str
 
-# API สำหรับดึงข้อมูลนักเรียนรายคน (เอาไว้แสดงในช่องแก้ไข)
 @app.get("/students/{student_id}")
 def get_student_by_id(student_id: int):
     conn = get_db_connection()
@@ -190,18 +186,16 @@ def get_student_by_id(student_id: int):
         raise HTTPException(status_code=404, detail="Student not found")
     return student
 
-# API สำหรับอัปเดตข้อมูลนักเรียน
 @app.put("/students/{student_id}")
 def update_student(student_id: int, data: UpdateStudent):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # เช็คก่อนว่ามีนักเรียนคนนี้ไหม
         cursor.execute("SELECT id FROM users WHERE id = %s AND role = 'student'", (student_id,))
         if not cursor.fetchone():
             raise HTTPException(status_code=404, detail="Student not found")
 
-        # อัปเดตข้อมูล
+        
         sql = "UPDATE users SET fullname = %s, student_class = %s WHERE id = %s AND role = 'student'"
         cursor.execute(sql, (data.fullname, data.student_class, student_id))
         conn.commit()
@@ -214,17 +208,14 @@ def update_student(student_id: int, data: UpdateStudent):
         cursor.close()
         conn.close()
 
-# API สำหรับลบข้อมูลนักเรียน
 @app.delete("/students/{student_id}")
 def delete_student(student_id: int):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # ลบข้อมูลในตาราง users
         cursor.execute("DELETE FROM users WHERE id = %s AND role = 'student'", (student_id,))
         conn.commit()
         
-        # เช็คว่ามีแถวถูกลบจริงไหม
         if cursor.rowcount == 0:
             raise HTTPException(status_code=404, detail="Student not found")
             
@@ -247,7 +238,6 @@ def add_point(data: AddPoint):
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # 1. ดึงคะแนนและชื่อความดีจาก category
         cursor.execute("""
             SELECT activity_name, base_point 
             FROM categories 
@@ -260,11 +250,9 @@ def add_point(data: AddPoint):
 
         point = cat["base_point"]
         
-        # 2. รวมชื่อความดีและชื่อคนบันทึกเข้าด้วยกัน
         desc = f"{cat['activity_name']} (บันทึกโดย: {data.teacher})"
         now = datetime.now()
 
-        # 3. บันทึก point (เพิ่ม category_id ลงไปบันทึกด้วย)
         cursor.execute("""
             INSERT INTO points (user_id, category_id, point, description, created_at, image)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -274,7 +262,7 @@ def add_point(data: AddPoint):
         return {"message": "Point added successfully"}
         
     except Exception as e:
-        print("❌ ERROR in add_point:", e) # ให้มันปริ้นท์บอกใน Terminal เผื่อมีปัญหา
+        print("❌ ERROR in add_point:", e) 
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         cursor.close()
@@ -288,7 +276,6 @@ def get_user_points(user_id: int):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # ดึงประวัติความดี เรียงจากวันที่ล่าสุดไปเก่าสุด
     cursor.execute("""
         SELECT point, description, DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') as date
         FROM points
@@ -313,8 +300,7 @@ def get_rewards():
     cursor.close()
     conn.close()
 
-    # แก้ IP ให้รูปขึ้น (คงไว้ตามเดิมที่คุณเขียน)
-    # base_url = "http://127.0.0.1:8000/images" 
+
     base_url = "http://172.30.123.207:8000/images"
     
     for row in data:
@@ -378,23 +364,19 @@ def redeem_reward(req: RedeemRequest):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     try:
-        # 1. เช็กคะแนนปัจจุบันของผู้ใช้
         cursor.execute("SELECT IFNULL(SUM(point), 0) as total FROM points WHERE user_id = %s", (req.user_id,))
         result = cursor.fetchone()
         current_points = result['total']
         
-        # 2. เช็กข้อมูลของรางวัล
         cursor.execute("SELECT name, point FROM rewards WHERE id = %s", (req.reward_id,))
         reward = cursor.fetchone()
 
         if not reward:
             raise HTTPException(status_code=404, detail="ไม่พบของรางวัล")
 
-        # 3. เช็กว่าพอแลกไหม
         if current_points < req.points_required:
             raise HTTPException(status_code=400, detail=f"คะแนนไม่พอ (มี {current_points} ต้องการ {req.points_required})")
 
-        # 4. บันทึกการหักคะแนนลงตาราง points
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         query_points = "INSERT INTO points (user_id, point, description, created_at, image) VALUES (%s, %s, %s, %s, %s)"
         cursor.execute(query_points, (
@@ -405,7 +387,6 @@ def redeem_reward(req: RedeemRequest):
             ""
         ))
         
-        # 5. บันทึกลงตาราง redeem (แก้ตรงนี้: เพิ่ม created_at ให้ระบบรู้เวลาที่แลก)
         query_redeem = "INSERT INTO redeem (user_id, reward_id, created_at) VALUES (%s, %s, %s)"
         cursor.execute(query_redeem, (req.user_id, req.reward_id, now))
 
@@ -432,7 +413,6 @@ def get_user_redeem_history(user_id: int):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # ดึงประวัติการแลกรางวัล พร้อมชื่อและรูปภาพ
     cursor.execute("""
         SELECT r.name, r.point, r.image, DATE_FORMAT(rd.created_at, '%d/%m/%Y %H:%i') as date
         FROM redeem rd
@@ -445,7 +425,6 @@ def get_user_redeem_history(user_id: int):
     cursor.close()
     conn.close()
 
-    # จัดการ URL ของรูปภาพให้แสดงผลได้
     base_url = "http://172.30.123.207:8000/images"
     
     for row in data:
@@ -462,7 +441,6 @@ def ranking():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # แก้ SQL ให้ alias ชื่อคอลัมน์เป็น total_class_point ให้ชัดเจน
     query = """
     SELECT 
         u.student_class,
@@ -489,9 +467,7 @@ def ranking():
     """
     cursor.execute(query)
     data = cursor.fetchall()
-    
-    # ... (แก้ipให้รูปขึ้น) ...
-    # base_url = "http://127.0.0.1:8000" 
+
     base_url = "http://172.30.123.207:8000"    
 
     for row in data:
